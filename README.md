@@ -1,3 +1,8 @@
+```sh
+curl -LO https://raw.githubusercontent.com/ahmetb/kubectl-aliases/master/.kubectl_aliases
+echo "[ -f ~/.kubectl_aliases ] && source ~/.kubectl_aliases >> .bashrc
+source .bashrc
+```
 # kubectl-aliases
 
 This repository contains [a script](generate_aliases.py) to generate hundreds of
