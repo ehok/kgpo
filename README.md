@@ -1,5 +1,5 @@
 ```sh
-curl -LO https://raw.githubusercontent.com/engincanhoke/kubectl-aliases/master/.kubectl_aliases ; echo "[ -f ~/.kubectl_aliases ] && source ~/.kubectl_aliases" >> .bashrc;source .bashrc
+curl -LO https://raw.githubusercontent.com/ehok/kubectl-aliases/master/.kubectl_aliases ; echo "[ -f ~/.kubectl_aliases ] && source ~/.kubectl_aliases" >> .bashrc;source .bashrc
 ```
 # kubectl-aliases
 
