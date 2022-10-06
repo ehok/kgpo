@@ -41,6 +41,10 @@ def main():
         ('lop', 'logs -f -p', None, None),
         ('p', 'proxy', None, ['sys']),
         ('pf', 'port-forward', None, ['sys']),
+        ('e', 'edit', None, None),
+        ('rr', 'rollout restart', None, None),
+        ('rs', 'rollout status', None, None),
+        ('s', 'scale', None, None),
         ('g', 'get', None, None),
         ('d', 'describe', None, None),
         ('rm', 'delete', None, None),
@@ -48,12 +52,13 @@ def main():
         ]
 
     res = [
-        ('po', 'pods', ['g', 'd', 'rm'], None),
-        ('dep', 'deployment', ['g', 'd', 'rm'], None),
-        ('svc', 'service', ['g', 'd', 'rm'], None),
-        ('ing', 'ingress', ['g', 'd', 'rm'], None),
-        ('cm', 'configmap', ['g', 'd', 'rm'], None),
-        ('sec', 'secret', ['g', 'd', 'rm'], None),
+        ('po', 'pods', ['e', 'g', 'd', 'rm'], None),
+        ('dep', 'deployment', ['s', 'rr', 'rs', 'e', 'g', 'd', 'rm'], None),
+        ('ds', 'daemonset', ['rr', 'rs', 'e', 'g', 'd', 'rm'], None),
+        ('svc', 'service', ['e', 'g', 'd', 'rm'], None),
+        ('ing', 'ingress', ['e', 'g', 'd', 'rm'], None),
+        ('cm', 'configmap', ['e', 'g', 'd', 'rm'], None),
+        ('sec', 'secret', ['e', 'g', 'd', 'rm'], None),
         ('no', 'nodes', ['g', 'd'], ['sys']),
         ('ns', 'namespaces', ['g', 'd', 'rm'], ['sys']),
         ]
@@ -75,7 +80,7 @@ def main():
     # mutually exclusive within each other.
     positional_args = [('f', '--recursive -f', ['g', 'd', 'rm'], res_types + ['all'
                        , 'l', 'sys']), ('l', '-l', ['g', 'd', 'rm'], ['f',
-                       'all']), ('n', '--namespace', ['g', 'd', 'rm',
+                       'all']), ('n', '--namespace', ['s', 'rr', 'rs', 'e', 'g', 'd', 'rm',
                        'lo', 'ex', 'pf'], ['ns', 'no', 'sys', 'all'])]
 
     # [(part, optional, take_exactly_one)]
