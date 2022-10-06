@@ -1,3 +1,9 @@
+zsh:
+```sh
+curl -LO https://raw.githubusercontent.com/ehok/kgpo/master/.kubectl_aliases ; echo "[ -f ~/.kubectl_aliases ] && source ~/.kubectl_aliases" >> .zshrc ; source .zshrc
+```
+
+bash:
 ```sh
 curl -LO https://raw.githubusercontent.com/ehok/kgpo/master/.kubectl_aliases ; echo "[ -f ~/.kubectl_aliases ] && source ~/.kubectl_aliases" >> .bashrc;source .bashrc
 ```
