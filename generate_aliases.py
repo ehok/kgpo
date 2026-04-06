@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 # Copyright 2017 Google Inc.
@@ -30,7 +30,7 @@ def main():
     # (alias, full, allow_when_oneof, incompatible_with)
     cmds = [('k', 'kubectl', None, None)]
 
-    globs = [('sys', '--namespace=kube-system', None, ['sys'])]
+    globs = [('sys', '--namespace=kube-system', None, None)]
 
     ops = [
         ('a', 'apply --recursive -f', None, None),
@@ -55,10 +55,13 @@ def main():
         ('po', 'pods', ['e', 'g', 'd', 'rm'], None),
         ('dep', 'deployment', ['s', 'rr', 'rs', 'e', 'g', 'd', 'rm'], None),
         ('ds', 'daemonset', ['rr', 'rs', 'e', 'g', 'd', 'rm'], None),
+        ('sts', 'statefulset', ['e', 'g', 'd', 'rm'], None),
         ('svc', 'service', ['e', 'g', 'd', 'rm'], None),
         ('ing', 'ingress', ['e', 'g', 'd', 'rm'], None),
         ('cm', 'configmap', ['e', 'g', 'd', 'rm'], None),
         ('sec', 'secret', ['e', 'g', 'd', 'rm'], None),
+        ('cj', 'cronjob', ['e', 'g', 'd', 'rm'], None),
+        ('sa', 'serviceaccount', ['e', 'g', 'd', 'rm'], None),
         ('no', 'nodes', ['g', 'd'], ['sys']),
         ('ns', 'namespaces', ['g', 'd', 'rm'], ['sys']),
         ]
@@ -68,10 +71,8 @@ def main():
         ('oyaml', '-o=yaml', ['g'], ['owide', 'ojson', 'sl']),
         ('owide', '-o=wide', ['g'], ['oyaml', 'ojson']),
         ('ojson', '-o=json', ['g'], ['owide', 'oyaml', 'sl']),
-        ('all', '--all-namespaces', ['g', 'd'], ['rm', 'f', 'no', 'sys'
-         ]),
-        ('sl', '--show-labels', ['g'], ['oyaml', 'ojson']
-         + diff(res_types, ['po', 'dep'])),
+        ('all', '--all-namespaces', ['g', 'd'], ['rm', 'f', 'no', 'ns', 'sys']),
+        ('sl', '--show-labels', ['g'], ['oyaml', 'ojson'], None),
         ('all', '--all', ['rm'], None), # caution: reusing the alias
         ('w', '--watch', ['g'], ['oyaml', 'ojson', 'owide']),
         ]
@@ -80,7 +81,7 @@ def main():
     # mutually exclusive within each other.
     positional_args = [('f', '--recursive -f', ['g', 'd', 'rm'], res_types + ['all'
                        , 'l', 'sys']), ('l', '-l', ['g', 'd', 'rm'], ['f',
-                       'all']), ('n', '--namespace', ['s', 'rr', 'rs', 'e', 'g', 'd', 'rm',
+                       'all']), ('n', '--namespace', ['g', 'd', 'rm',
                        'lo', 'ex', 'pf'], ['ns', 'no', 'sys', 'all'])]
 
     # [(part, optional, take_exactly_one)]
@@ -93,6 +94,18 @@ def main():
         (positional_args, True, True),
         ]
 
+    shellFormatting = {
+        "bash": "alias {}='{}'",
+        "zsh": "alias {}='{}'",
+        "fish": "abbr --add {} \"{}\"",
+        "nushell": "alias {} = {}",
+    }
+
+    shell = sys.argv[1] if len(sys.argv) > 1 else "bash"
+    if shell not in shellFormatting:
+        raise ValueError("Shell \"{}\" not supported. Options are {}"
+                        .format(shell, [key for key in shellFormatting]))
+
     out = gen(parts)
 
     # prepare output
@@ -102,9 +115,19 @@ def main():
                          'license_header')
         with open(header_path, 'r') as f:
             print(f.read())
+
+    seen_aliases = set()
+
     for cmd in out:
-        print("alias {}='{}'".format(''.join([a[0] for a in cmd]),
-              ' '.join([a[1] for a in cmd])))
+        alias = ''.join([a[0] for a in cmd])
+        command = ' '.join([a[1] for a in cmd])
+
+        if alias in seen_aliases:
+            print("Alias conflict detected: {}".format(alias), file=sys.stderr)
+
+        seen_aliases.add(alias)
+
+        print(shellFormatting[shell].format(alias, command))
 
 
 def gen(parts):
@@ -138,35 +161,29 @@ def gen(parts):
 
 
 def is_valid(cmd):
-    for i in xrange(0, len(cmd)):
+    return is_valid_requirements(cmd) and is_valid_incompatibilities(cmd)
 
+
+def is_valid_requirements(cmd):
+    parts = {c[0] for c in cmd}
+
+    for i in range(0, len(cmd)):
         # check at least one of requirements are in the cmd
         requirements = cmd[i][2]
-        if requirements:
-            found = False
-            for r in requirements:
-                for j in xrange(0, i):
-                    if cmd[j][0] == r:
-                        found = True
-                        break
-                if found:
-                    break
-            if not found:
-                return False
+        if requirements and len(parts & set(requirements)) == 0:
+            return False
 
+    return True
+
+
+def is_valid_incompatibilities(cmd):
+    parts = {c[0] for c in cmd}
+
+    for i in range(0, len(cmd)):
         # check none of the incompatibilities are in the cmd
         incompatibilities = cmd[i][3]
-        if incompatibilities:
-            found = False
-            for inc in incompatibilities:
-                for j in xrange(0, i):
-                    if cmd[j][0] == inc:
-                        found = True
-                        break
-                if found:
-                    break
-            if found:
-                return False
+        if incompatibilities and len(parts & set(incompatibilities)) > 0:
+            return False
 
     return True
 
@@ -176,7 +193,14 @@ def combinations(a, n, include_0=True):
     for j in xrange(0, n + 1):
         if not include_0 and j == 0:
             continue
-        l += list(itertools.combinations(a, j))
+
+        cs = itertools.combinations(a, j)
+
+        # check incompatibilities early
+        cs = (c for c in cs if is_valid_incompatibilities(c))
+
+        l += list(cs)
+
     return l
 
 
